@@ -7,7 +7,7 @@ const projects = [
     title: 'Library App',
     description: 'An app for tracking library inventory and patrons.',
     technologies: 'Node.js, Express, MongoDB, Mongoose, Javascript, Google OAuth, GitHub, Render',
-    projectUrl: 'https://cse341-finalproject-nlyf.onrender.com/'
+    projectUrl: 'https://cse341-finalproject-nlyf.onrender.com/api-docs/'
   },
   {
     title: "SleepOutside",
