@@ -20,7 +20,7 @@ export default function ProjectList({ projects }: ProjectListProps) {
           title={project.title}
           description={project.description}
           technologies={project.technologies}
-          projectUrl={project.projectUrl}
+          link={project.projectUrl}
         />
       ))}
     </div>
