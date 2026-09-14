@@ -3,11 +3,12 @@ import { getProjectById } from '@/lib/projects-db';
 
 // GET /api/projects/[id]
 export async function GET(
-    request: Request,
+    _request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     
-    const id = Number((await params).id);
+    const { id: idParam } = await params;
+    const id = Number(idParam);
 
     // check if a valid id is provided, otherwise return an error
     if (Number.isNaN(id)) {
@@ -15,7 +16,7 @@ export async function GET(
     }
 
     // look up the item by id in your data source
-    const project = getProjectById(id);
+    const project = await getProjectById(id);
 
     // return NextResponse.json({ error: 'Not found' }, { status: 404 }) if missing
     if (!project) {
