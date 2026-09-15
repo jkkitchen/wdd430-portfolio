@@ -1,5 +1,7 @@
 import { getProjects } from "@/lib/projects-db";
 
+export const dynamic = "force-dynamic"; //This is for static vs dynamic learning activity. This makes the page rendering dynamic rather than static.
+
 export default async function SchoolProjects() {
   const projects = await getProjects("school");
 
