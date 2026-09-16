@@ -2,6 +2,7 @@
 
 import { sql } from "@vercel/postgres";
 
+
 export interface Project {
   id: number;
   title: string;
@@ -37,10 +38,17 @@ export async function fetchFilteredProjects(
   currentPage: number,
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const searchTerm = `%${query}%`; //Add SQL wildcards so ILIKE searches for the query anywhere in the text
 
   const { rows } = await sql<Project>`
   SELECT * FROM projects
-  WHERE title ILIKE '%${query}%' OR description ILIKE '%${query}%'
+  WHERE title ILIKE ${searchTerm}  
+    OR description ILIKE ${searchTerm}  
+    OR EXISTS (
+      SELECT 1
+      FROM unnest(technologies) AS technology
+      WHERE technology ILIKE ${searchTerm} 
+    )
   ORDER BY id
   LIMIT ${ITEMS_PER_PAGE}
   OFFSET ${offset}`;
@@ -49,15 +57,20 @@ export async function fetchFilteredProjects(
 }
 
 export async function fetchProjectsPages(query: string) {
-  const count = await db.project.count({
-    where: {
-      OR: [
-        { title: { contains: query, mode: "insensitive" } },
-        { description: { contains: query, mode: "insensitive" } },
-        { technologies: { hasSome: [query] } },
-      ],
-    },
-  });
+  const searchTerm = `%${query}%`; //Add SQL wildcards so ILIKE searches for the query anywhere in the text
 
-  return Math.ceil(count / ITEMS_PER_PAGE);
+  const { rows } = await sql<{ count: string }>`
+  SELECT COUNT(*) AS count FROM projects
+  WHERE title ILIKE ${searchTerm} 
+    OR description ILIKE ${searchTerm}  
+    OR EXISTS (
+      SELECT 1
+      FROM unnest(technologies) AS technology
+      WHERE technology ILIKE ${searchTerm} 
+    )`;
+
+  const count = Number(rows[0].count); //The query returns one row which contains the count, or number of results. To access it we pull the first (and only) value from the table returned, then .count gets the value.
+  const pages = Math.ceil(count / ITEMS_PER_PAGE); //calculates the number of pages needed to display all the results
+
+  return pages;
 }

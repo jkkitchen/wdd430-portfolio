@@ -1,0 +1,31 @@
+//Search and Pagination Learning Activity
+"use client";
+
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { useDebouncedCallback } from "use-debounce";
+
+export function ProjectSearch() {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const { push } = useRouter(); //to make it record search history so back button restores previous search
+
+const handleSearch = useDebouncedCallback((term: string) => {
+  const params = new URLSearchParams(searchParams);
+  params.set("page", "1");
+  if (term) {
+    params.set("query", term);
+  } else {
+    params.delete("query");
+  }
+  push(`${pathname}?${params.toString()}`);
+}, 300);
+
+  return (
+    <input
+      type="search"
+      placeholder="Search projects..."
+      defaultValue={searchParams.get("query")?.toString()}
+      onChange={(e) => handleSearch(e.target.value)}
+    />
+  );
+}
