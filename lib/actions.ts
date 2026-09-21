@@ -13,59 +13,75 @@ const ProjectFormSchema = z.object({
 });
 
 export async function createProject(formData: FormData) {
-  const raw = {
-    title: formData.get('title'),
-    description: formData.get('description'),
-    technologies: formData.get('technologies'),
-  };
+    const raw = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        technologies: formData.get('technologies'),
+    };
 
-  const parsed = ProjectFormSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new Error('Invalid project input.');
-  }
+    const parsed = ProjectFormSchema.safeParse(raw);
+    if (!parsed.success) {
+        throw new Error('Invalid project input.');
+    }
 
-  const { title, description, technologies } = parsed.data;
+    const { title, description, technologies } = parsed.data;
 
-  await sql`
-    INSERT INTO projects (title, description, technologies)
-    VALUES (${title}, ${description}, string_to_array(${technologies}, ','))
-  `;
+    try {
+        await sql`
+            INSERT INTO projects (title, description, technologies)
+            VALUES (${title}, ${description}, string_to_array(${technologies}, ','))
+        `;
+    } catch (error) {
+        console.error("Error creating project:", error);
+        throw new Error("Failed to create project. Please try again later.");
+    }
 
-  revalidatePath('/projects');
-  redirect('/projects');
+    revalidatePath('/projects');
+    redirect('/projects');
 }
 
 //READ
 
 //UPDATE
 export async function updateProject(id: number, formData: FormData) {
-  const raw = {    
-    title: formData.get("title"),
-    description: formData.get("description"),
-    technologies: formData.get("technologies"),
-  };
+    const raw = {    
+        title: formData.get("title"),
+        description: formData.get("description"),
+        technologies: formData.get("technologies"),
+    };
 
-  const parsed = ProjectFormSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new Error("Invalid project input.");
-  }
+    const parsed = ProjectFormSchema.safeParse(raw);
+    if (!parsed.success) {
+        throw new Error("Invalid project input.");
+    }
 
-  const { title, description, technologies } = parsed.data;
+    const { title, description, technologies } = parsed.data;
 
-  await sql`
-    UPDATE projects
-    SET title = ${title}, 
-        description = ${description}, 
-        technologies = string_to_array(${technologies}, ',') 
-    WHERE id= ${id};    
-  `;
+    try {
+        await sql`
+            UPDATE projects
+            SET title = ${title}, 
+                description = ${description}, 
+                technologies = string_to_array(${technologies}, ',') 
+            WHERE id = ${id};    
+        `;
+    } catch (error) {
+        console.error("Error editing project:", error);
+        throw new Error("Failed to edit project. Please try again later.");
+    }
 
-  revalidatePath("/projects");
-  redirect("/projects");
+    revalidatePath("/projects");
+    redirect("/projects");
 }
 
 //DELETE
 export async function deleteProject(id: number) {
-    await sql`DELETE FROM projects WHERE id = ${id}`;
+    try {
+        await sql`DELETE FROM projects WHERE id = ${id}`;
+    } catch (error) {
+        console.error("Error deleting project:", error);
+        throw new Error("Failed to delete project. Please try again later.");
+    }
+    
     revalidatePath('/projects');
 }
