@@ -28,6 +28,9 @@ export default async function Projects(props: {
         <Link href="/projects/school" className="text-blue-500 hover:underline">
           School Projects
         </Link>
+        <Link href="/projects/create" className="text-blue-500 hover:underline">
+          Create New Project
+        </Link>
       </div>
 
       <div>

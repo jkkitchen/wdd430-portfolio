@@ -11,6 +11,7 @@ export default function ProjectList({ projects }: ProjectListProps) {
       {projects.map((project) => (
         <ProjectCard
           key={project.id}
+          id={project.id}
           title={project.title}
           description={project.description}
           technologies={project.technologies.join(", ")}
