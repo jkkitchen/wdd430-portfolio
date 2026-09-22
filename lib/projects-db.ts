@@ -2,7 +2,7 @@
 
 import { sql } from "@vercel/postgres";
 
-
+//Projects
 export interface Project {
   id: number;
   title: string;
@@ -76,4 +76,27 @@ export async function fetchProjectsPages(query: string) {
   const pages = Math.ceil(count / ITEMS_PER_PAGE); //calculates the number of pages needed to display all the results
 
   return pages;
+}
+
+//Users
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+};
+
+export async function getUserByEmail(email: string): Promise<User | undefined> {
+  try {
+    const { rows } = await sql<User>`
+      SELECT id, name, email, password_hash AS "passwordHash"
+      FROM users
+      WHERE email = ${email}
+    `;
+
+    return rows[0];
+  } catch (error) {
+    console.error("Failed to get user by email:", error);
+    throw new Error("Failed to get user.");
+  }
 }

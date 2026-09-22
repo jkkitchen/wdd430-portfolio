@@ -1,9 +1,39 @@
-'use server';
+"use server";
 
-import { sql } from '@vercel/postgres';
-import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
-import { redirect } from 'next/navigation';
+import { sql } from "@vercel/postgres";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { redirect } from "next/navigation";
+import { signIn } from "@/auth";
+import { AuthError } from "next-auth";
+import { auth } from "@/auth";
+
+//AUTHENTICATE
+export async function authenticate(
+  _prevState: string | undefined,
+  formData: FormData,
+) {
+  try {
+    await signIn("credentials", formData);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return "Invalid email or password.";
+        default:
+          return "Something went wrong.";
+      }
+    }
+    throw error; // re-throw so Next.js handles redirects correctly
+  }
+}
+
+//AUTHORIZE
+async function requireOwnerSession() {
+  const session = await auth();
+  if (!session?.user) throw new Error("Not authenticated");
+  return session;
+}
 
 //CREATE
 const currentYear = new Date().getFullYear();
@@ -35,6 +65,9 @@ export async function createProject(
   _prevState: State,
   formData: FormData,
 ): Promise<State> {
+    //User Only
+    await requireOwnerSession();
+
   const raw = {
     title: formData.get("title"),
     description: formData.get("description"),
@@ -42,15 +75,16 @@ export async function createProject(
     yearCompleted: formData.get("yearCompleted"),
   };
 
-    const validatedFields = ProjectFormSchema.safeParse(raw);
-    if (!validatedFields.success) {
-      return {
-        errors: validatedFields.error.flatten().fieldErrors,
-        message: "Missing or invalid fields. Failed to create project.",
-      };
-    }
+  const validatedFields = ProjectFormSchema.safeParse(raw);
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Missing or invalid fields. Failed to create project.",
+    };
+  }
 
-  const { title, description, technologies, yearCompleted } = validatedFields.data;
+  const { title, description, technologies, yearCompleted } =
+    validatedFields.data;
 
   try {
     await sql`
@@ -59,35 +93,36 @@ export async function createProject(
         `;
   } catch (error) {
     console.error("Error creating project:", error);
-      return {
-        message: "Database Error: Failed to create projects."
-    }
+    return {
+      message: "Database Error: Failed to create projects.",
+    };
   }
 
   revalidatePath("/projects");
   redirect("/projects");
 }
 
-//READ
-
 //UPDATE
 export async function updateProject(id: number, formData: FormData) {
-    const raw = {
-      title: formData.get("title"),
-      description: formData.get("description"),
-      technologies: formData.get("technologies"),
-      yearCompleted: formData.get("yearCompleted"),
-    };
+  //User Only
+  await requireOwnerSession();
 
-    const parsed = ProjectFormSchema.safeParse(raw);
-    if (!parsed.success) {
-        throw new Error("Invalid project input.");
-    }
+  const raw = {
+    title: formData.get("title"),
+    description: formData.get("description"),
+    technologies: formData.get("technologies"),
+    yearCompleted: formData.get("yearCompleted"),
+  };
 
-    const { title, description, technologies, yearCompleted } = parsed.data;
+  const parsed = ProjectFormSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error("Invalid project input.");
+  }
 
-    try {
-        await sql`
+  const { title, description, technologies, yearCompleted } = parsed.data;
+
+  try {
+    await sql`
             UPDATE projects
             SET title = ${title}, 
                 description = ${description}, 
@@ -95,23 +130,27 @@ export async function updateProject(id: number, formData: FormData) {
                 year_completed = ${yearCompleted} 
             WHERE id = ${id};    
         `;
-    } catch (error) {
-        console.error("Error editing project:", error);
-        throw new Error("Failed to edit project. Please try again later.");
-    }
+  } catch (error) {
+    console.error("Error editing project:", error);
+    throw new Error("Failed to edit project. Please try again later.");
+  }
 
-    revalidatePath("/projects");
-    redirect("/projects");
+  revalidatePath("/projects");
+  redirect("/projects");
 }
 
 //DELETE
 export async function deleteProject(id: number) {
-    try {
-        await sql`DELETE FROM projects WHERE id = ${id}`;
-    } catch (error) {
-        console.error("Error deleting project:", error);
-        throw new Error("Failed to delete project. Please try again later.");
-    }
-    
-    revalidatePath('/projects');
+  //User Only
+  await requireOwnerSession();
+
+  try {
+    await sql`DELETE FROM projects WHERE id = ${id}`;
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    throw new Error("Failed to delete project. Please try again later.");
+  }
+
+  revalidatePath("/projects");
 }
+
