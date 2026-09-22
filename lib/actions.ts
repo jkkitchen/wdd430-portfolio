@@ -6,48 +6,77 @@ import { z } from 'zod';
 import { redirect } from 'next/navigation';
 
 //CREATE
+const currentYear = new Date().getFullYear();
+
 const ProjectFormSchema = z.object({
-  title: z.string().min(2),
-  description: z.string().min(10),
-  technologies: z.string().min(2),
+  title: z.string().min(2, "Title must be at least 2 characters."),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters."),
+  technologies: z.string().min(2, "Add at least one technology."),
+  yearCompleted: z.coerce
+    .number()
+    .int("Year must be a whole number.")
+    .gte(2000, "Year must be 2000 or later.")
+    .lte(currentYear, `Year cannot be greater than ${currentYear}.`),
 });
 
-export async function createProject(formData: FormData) {
-    const raw = {
-        title: formData.get('title'),
-        description: formData.get('description'),
-        technologies: formData.get('technologies'),
-    };
+export type State = {
+  errors?: {
+    title?: string[];
+    description?: string[];
+    technologies?: string[];
+    yearCompleted?: string[];
+  };
+  message?: string | null;
+};
 
-    const parsed = ProjectFormSchema.safeParse(raw);
-    if (!parsed.success) {
-        throw new Error('Invalid project input.');
+export async function createProject(
+  _prevState: State,
+  formData: FormData,
+): Promise<State> {
+  const raw = {
+    title: formData.get("title"),
+    description: formData.get("description"),
+    technologies: formData.get("technologies"),
+    yearCompleted: formData.get("yearCompleted"),
+  };
+
+    const validatedFields = ProjectFormSchema.safeParse(raw);
+    if (!validatedFields.success) {
+      return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: "Missing or invalid fields. Failed to create project.",
+      };
     }
 
-    const { title, description, technologies } = parsed.data;
+  const { title, description, technologies, yearCompleted } = validatedFields.data;
 
-    try {
-        await sql`
-            INSERT INTO projects (title, description, technologies)
-            VALUES (${title}, ${description}, string_to_array(${technologies}, ','))
+  try {
+    await sql`
+            INSERT INTO projects (title, description, technologies, year_completed)
+            VALUES (${title}, ${description}, string_to_array(${technologies}, ','), ${yearCompleted})
         `;
-    } catch (error) {
-        console.error("Error creating project:", error);
-        throw new Error("Failed to create project. Please try again later.");
+  } catch (error) {
+    console.error("Error creating project:", error);
+      return {
+        message: "Database Error: Failed to create projects."
     }
+  }
 
-    revalidatePath('/projects');
-    redirect('/projects');
+  revalidatePath("/projects");
+  redirect("/projects");
 }
 
 //READ
 
 //UPDATE
 export async function updateProject(id: number, formData: FormData) {
-    const raw = {    
-        title: formData.get("title"),
-        description: formData.get("description"),
-        technologies: formData.get("technologies"),
+    const raw = {
+      title: formData.get("title"),
+      description: formData.get("description"),
+      technologies: formData.get("technologies"),
+      yearCompleted: formData.get("yearCompleted"),
     };
 
     const parsed = ProjectFormSchema.safeParse(raw);
@@ -55,14 +84,15 @@ export async function updateProject(id: number, formData: FormData) {
         throw new Error("Invalid project input.");
     }
 
-    const { title, description, technologies } = parsed.data;
+    const { title, description, technologies, yearCompleted } = parsed.data;
 
     try {
         await sql`
             UPDATE projects
             SET title = ${title}, 
                 description = ${description}, 
-                technologies = string_to_array(${technologies}, ',') 
+                technologies = string_to_array(${technologies}, ','),
+                year_completed = ${yearCompleted} 
             WHERE id = ${id};    
         `;
     } catch (error) {

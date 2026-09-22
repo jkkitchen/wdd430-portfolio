@@ -9,6 +9,7 @@ export interface Project {
   description: string;
   type: "opensource" | "school";
   technologies: string[];
+  year_completed: number;
   link?: string;
 }
 
@@ -43,7 +44,8 @@ export async function fetchFilteredProjects(
   const { rows } = await sql<Project>`
   SELECT * FROM projects
   WHERE title ILIKE ${searchTerm}  
-    OR description ILIKE ${searchTerm}  
+    OR description ILIKE ${searchTerm}
+    OR year_completed::text ILIKE ${searchTerm}  
     OR EXISTS (
       SELECT 1
       FROM unnest(technologies) AS technology
@@ -62,7 +64,8 @@ export async function fetchProjectsPages(query: string) {
   const { rows } = await sql<{ count: string }>`
   SELECT COUNT(*) AS count FROM projects
   WHERE title ILIKE ${searchTerm} 
-    OR description ILIKE ${searchTerm}  
+    OR description ILIKE ${searchTerm}
+    OR year_completed::text ILIKE ${searchTerm}  
     OR EXISTS (
       SELECT 1
       FROM unnest(technologies) AS technology

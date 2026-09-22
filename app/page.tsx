@@ -15,7 +15,7 @@ export default async function Home() {
           <h1 className="text-4xl font-bold mb-4">Welcome to My Portfolio</h1>
 
           <p className="text-lg mb-8">
-            I'm Jessica Kitchen, here are some of my projects:
+            I&apos;m Jessica Kitchen, here are some of my projects:
           </p>
 
           <ProjectList projects={projects} />
